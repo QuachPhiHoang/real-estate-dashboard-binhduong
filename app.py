@@ -1,27 +1,31 @@
 # DASHBOARD BDS BINH DUONG
-
+import os
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from dash import Dash, dcc, html, Input, Output
 
+print("Current working directory:", os.getcwd())
+print("Files in current folder:")
+print(os.listdir())
 try:
     # Load dữ liệu CSV
     file_path = 'bat_dong_san_com_vn_fillter_update.csv'
+    print(f"Attempting to read CSV file: {file_path}")
     df = pd.read_csv(file_path)
-
+    print("CSV loaded successfully with", len(df), "rows")
     # Tiền xử lý ngày tháng
     if 'Thoi_gian_dang' in df.columns:
         df['Thoi_gian_dang'] = pd.to_datetime(df['Thoi_gian_dang'], errors='coerce')
         df = df.dropna(subset=['Thoi_gian_dang'])
         df['date'] = df['Thoi_gian_dang'].dt.date
 except Exception as e:
-    print("❌ Lỗi load dữ liệu:", str(e))
+    print("Lỗi load dữ liệu:", str(e))
     df = pd.DataFrame()  # Tạo DataFrame trống để tiếp tục chạy app
 
 # App
 app = Dash(__name__)
-server = app.server  # 👈 CẦN THÊM DÒNG NÀY
+server = app.server  # CẦN THÊM DÒNG NÀY
 app.title = 'Dashboard BĐS Bình Dương'
 
 # Layout
