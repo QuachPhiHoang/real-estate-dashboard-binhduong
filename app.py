@@ -5,18 +5,23 @@ import plotly.express as px
 import plotly.graph_objects as go
 from dash import Dash, dcc, html, Input, Output
 
-# Load dữ liệu CSV
-file_path = 'bat_dong_san_com_vn_fillter_update.csv'
-df = pd.read_csv(file_path)
+try:
+    # Load dữ liệu CSV
+    file_path = 'bat_dong_san_com_vn_fillter_update.csv'
+    df = pd.read_csv(file_path)
 
-# Tiền xử lý ngày tháng
-if 'Thoi_gian_dang' in df.columns:
-    df['Thoi_gian_dang'] = pd.to_datetime(df['Thoi_gian_dang'], errors='coerce')
-    df = df.dropna(subset=['Thoi_gian_dang'])
-    df['date'] = df['Thoi_gian_dang'].dt.date
+    # Tiền xử lý ngày tháng
+    if 'Thoi_gian_dang' in df.columns:
+        df['Thoi_gian_dang'] = pd.to_datetime(df['Thoi_gian_dang'], errors='coerce')
+        df = df.dropna(subset=['Thoi_gian_dang'])
+        df['date'] = df['Thoi_gian_dang'].dt.date
+except Exception as e:
+    print("❌ Lỗi load dữ liệu:", str(e))
+    df = pd.DataFrame()  # Tạo DataFrame trống để tiếp tục chạy app
 
 # App
 app = Dash(__name__)
+server = app.server  # 👈 CẦN THÊM DÒNG NÀY
 app.title = 'Dashboard BĐS Bình Dương'
 
 # Layout
@@ -180,10 +185,7 @@ def update_charts(selected_districts, selected_types):
 
     return bar_fig, pie_fig, line_fig, double_bar_fig, ward_fig
 
-# App
-app = Dash(__name__)
-server = app.server  # 👈 CẦN THÊM DÒNG NÀY
-app.title = 'Dashboard BĐS Bình Dương'
+
 
 # Chạy app
 if __name__ == '__main__':
