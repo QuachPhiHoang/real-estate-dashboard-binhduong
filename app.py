@@ -1,59 +1,50 @@
 # DASHBOARD BDS BINH DUONG
-import os
+
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from dash import Dash, dcc, html, Input, Output
 
-print("Current working directory:", os.getcwd())
-print("Files in current folder:")
-print(os.listdir())
+# Load dữ liệu CSV
+file_path = 'bat_dong_san_com_vn_fillter_update.csv'
+df = pd.read_csv(file_path)
 
-try:
-    # Load dữ liệu CSV
-    file_path = 'bat_dong_san_com_vn_fillter_update.csv'
-    print(f"Attempting to read CSV file: {file_path}")
-    df = pd.read_csv(file_path)
-    print("CSV loaded successfully with", len(df), "rows")
-    
-    # Tiền xử lý ngày tháng
-    if 'Thoi_gian_dang' in df.columns:
-        df['Thoi_gian_dang'] = pd.to_datetime(df['Thoi_gian_dang'], errors='coerce')
-        df = df.dropna(subset=['Thoi_gian_dang'])
-        df['date'] = df['Thoi_gian_dang'].dt.date
-
-except Exception as e:
-    print("Lỗi load dữ liệu:", str(e))
-    df = pd.DataFrame()  # Tạo DataFrame trống để tiếp tục chạy app
+# Tiền xử lý ngày tháng
+if 'Thoi_gian_dang' in df.columns:
+    df['Thoi_gian_dang'] = pd.to_datetime(df['Thoi_gian_dang'], errors='coerce')
+    df = df.dropna(subset=['Thoi_gian_dang'])
+    df['date'] = df['Thoi_gian_dang'].dt.date
 
 # App
 app = Dash(__name__)
-server = app.server
+server = app.server  # CẦN THÊM DÒNG NÀY
 app.title = 'Dashboard BĐS Bình Dương'
 
-# Layout cố định - KHÔNG DÙNG DATA TRỰC TIẾP ở đây
+# Layout
 app.layout = html.Div([
     html.H1('📊 Dashboard BĐS Bình Dương', style={'textAlign': 'center'}),
 
-    html.Div(id='filters-container', children=[
-        html.Div([
-            html.Label('Chọn Quận/Huyện:'),
-            dcc.Dropdown(
-                id='district-filter',
-                multi=True,
-                placeholder='-- Lọc theo Quận/Huyện --'
-            )
-        ], style={'width': '48%', 'display': 'inline-block'}),
+    html.Div([
+        html.Label('Chọn Quận/Huyện:'),
+        dcc.Dropdown(
+            options=[{'label': qh, 'value': qh} for qh in sorted(df['Quan_huyen'].dropna().unique())],
+            value=None,
+            id='district-filter',
+            multi=True,
+            placeholder='-- Lọc theo Quận/Huyện --'
+        )
+    ], style={'width': '48%', 'display': 'inline-block'}),
 
-        html.Div([
-            html.Label('Chọn loại hình:'),
-            dcc.Dropdown(
-                id='property-filter',
-                multi=True,
-                placeholder='-- Lọc theo Loại hình BĐS --'
-            )
-        ], style={'width': '48%', 'display': 'inline-block', 'float': 'right'}),
-    ]),
+    html.Div([
+        html.Label('Chọn loại hình:'),
+        dcc.Dropdown(
+            options=[{'label': ptype, 'value': ptype} for ptype in sorted(df['Property_Type'].dropna().unique())],
+            value=None,
+            id='property-filter',
+            multi=True,
+            placeholder='-- Lọc theo Loại hình BĐS --'
+        )
+    ], style={'width': '48%', 'display': 'inline-block', 'float': 'right'}),
 
     dcc.Graph(id='bar-chart'),
     dcc.Graph(id='double-bar-chart'),
@@ -64,9 +55,7 @@ app.layout = html.Div([
 
 # Callbacks
 @app.callback(
-    [Output('district-filter', 'options'),
-     Output('property-filter', 'options'),
-     Output('bar-chart', 'figure'),
+    [Output('bar-chart', 'figure'),
      Output('pie-chart', 'figure'),
      Output('line-chart', 'figure'),
      Output('double-bar-chart', 'figure'),
@@ -77,30 +66,13 @@ app.layout = html.Div([
 )
 
 def update_charts(selected_districts, selected_types):
-    global df  # Sử dụng df đã load từ đầu
-
-    # Mặc định cho dropdown
-    district_options = []
-    property_options = []
-
-    # Nếu có dữ liệu
-    if not df.empty:
-        district_options = [{'label': qh, 'value': qh} for qh in sorted(df['Quan_huyen'].dropna().unique())]
-        property_options = [{'label': ptype, 'value': ptype} for ptype in sorted(df['Property_Type'].dropna().unique())]
-
-    # Filter data
     filtered_df = df.copy()
-    if selected_districts and not filtered_df.empty:
+
+    if selected_districts:
         filtered_df = filtered_df[filtered_df['Quan_huyen'].isin(selected_districts)]
-    if selected_types and not filtered_df.empty:
+
+    if selected_types:
         filtered_df = filtered_df[filtered_df['Property_Type'].isin(selected_types)]
-    
-    # Khởi tạo figure rỗng
-    bar_fig = go.Figure()
-    pie_fig = go.Figure()
-    line_fig = go.Figure()
-    double_bar_fig = go.Figure()
-    ward_fig = go.Figure()
 
     # 1. Biểu đồ cột (bar chart)
     if not filtered_df.empty:
@@ -197,8 +169,8 @@ def update_charts(selected_districts, selected_types):
                                xaxis_title='Phường/Xã',
                                yaxis_title='Số lượng tin',
                                xaxis_tickangle=-45,
-                               height=1000,  # 👈 Chiều cao phù hợp hơn
-                               margin=dict(t=60, b=120),  # 👈 Giảm khoảng trống dư thừa
+                               height=1000,  # Chiều cao phù hợp hơn
+                               margin=dict(t=60, b=120),  # Giảm khoảng trống dư thừa
                                )
     else:
         ward_fig = go.Figure()
@@ -213,4 +185,4 @@ def update_charts(selected_districts, selected_types):
 
 # Chạy app
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run(debug=True)
